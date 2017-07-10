@@ -8,6 +8,7 @@ module Postal =
         let jisCode: string = a.[0]
         let oldPostalCode: String = a.[1]   
         let postalCode: String = a.[2]
+        let postalCodeShort: String = a.[2].Substring(0, 3)
         let kanaPrefecture: String = a.[3]
         let kanaAddress1: String = a.[4]
         let kanaAddress2: String = a.[5]
@@ -41,7 +42,9 @@ module Postal =
 
         [<JsonProperty("postal_code")>]
         member this.PostalCode with get() = postalCode
-        
+        [<JsonIgnore>]
+        member this.PostalCodeShort with get() = postalCodeShort
+
         [<JsonProperty("kana_prefecture")>]
         member this.KanaPrefecture with get() = kanaPrefecture
 
