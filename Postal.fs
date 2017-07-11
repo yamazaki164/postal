@@ -6,7 +6,7 @@ module Postal =
     [<JsonObject("postal")>]
     type Postal (a : String[]) = class
         let jisCode: string = a.[0]
-        let oldPostalCode: String = a.[1]   
+        let oldPostalCode: String = a.[1]
         let postalCode: String = a.[2]
         let postalCodeShort: String = a.[2].Substring(0, 3)
         let kanaPrefecture: String = a.[3]
@@ -37,7 +37,7 @@ module Postal =
         [<JsonProperty("jis_code")>]
         member this.JisCode with get() = jisCode
 
-        [<JsonProperty("old_postal_code")>]
+        [<JsonIgnore>]
         member this.OldPostalCode with get() = oldPostalCode
 
         [<JsonProperty("postal_code")>]

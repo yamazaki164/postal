@@ -33,6 +33,8 @@ module Program =
         tmpFile
 
     let zip () = ZipFile.OpenRead(downloadedZipFile())
+    // let zip () = ZipFile.OpenRead(@"C:\Users\hiroshi.yamazaki\works\postal\ken_all.zip")
+
     let csv () = zip().GetEntry("KEN_ALL.CSV")
     let encSjis = Encoding.GetEncoding(932)
     
@@ -43,15 +45,15 @@ module Program =
                 let srcByte = encSjis.GetBytes(str)
                 let destByte = Encoding.Convert(encSjis, Encoding.UTF8, srcByte)
                 let s = Encoding.UTF8.GetString(destByte)
-                let sa = s.Trim().Split(',') |> Array.map (fun s -> s.Trim().TrimStart('"').TrimEnd('"'))
+                let sa = s.Trim().Split(',') |> Array.map (fun s -> s.TrimStart('"').TrimEnd('"').Trim())
                 yield Postal(sa)
         } |> Seq.toList
 
+    let groupedPostal () = List.groupBy (fun (x : Postal) -> x.PostalCodeShort) (parsePostal())
+
     let handler(context: ILambdaContext) = 
-        let plist = parsePostal()
-        plist.Length
+        groupedPostal().Length
 
     [<EntryPoint>]
     let main argv =
-        // outputPostalJson
-        0 // return an integer exit code
+        0
