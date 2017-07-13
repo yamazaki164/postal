@@ -17,6 +17,11 @@ module Program =
     open Model.Postal
 
     Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance)
+    
+    type InputValue = {
+        [<JsonProperty("postal")>]
+        postal : String
+    }
 
     let s3client = new Amazon.S3.AmazonS3Client()
 
@@ -51,8 +56,8 @@ module Program =
 
     let groupedPostal () = List.groupBy (fun (x : Postal) -> x.PostalCodeShort) (parsePostal())
 
-    let handler(context: ILambdaContext) = 
-        groupedPostal().Length
+    let handler (input: InputValue) (context: ILambdaContext) = 
+        input.postal
 
     [<EntryPoint>]
     let main argv =
