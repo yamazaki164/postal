@@ -3,6 +3,7 @@
 open Amazon.Lambda.Core
 open Amazon.Lambda.Serialization.Json
 open Amazon.S3
+open Amazon.S3.Model
 
 [<assembly:LambdaSerializer(typeof<JsonSerializer>)>]
 do ()
@@ -25,25 +26,24 @@ module Program =
 
     let s3client = new Amazon.S3.AmazonS3Client()
 
-    let getZipFileStream () = 
+    let getZipFileStream (): Stream = 
         let req = HttpWebRequest.Create(@"http://www.post.japanpost.jp/zipcode/dl/oogaki/zip/ken_all.zip")
         let result = req.GetResponseAsync().Result
         result.GetResponseStream()
 
-    let tmpFile = Path.Combine([Path.GetTempPath(); Path.GetRandomFileName()] |> List.toArray)
+    let tmpFile: String = Path.Combine([Path.GetTempPath(); Path.GetRandomFileName()] |> List.toArray)
 
-    let downloadedZipFile () =
+    let downloadedZipFile (): String =
         use file = new FileStream(tmpFile, FileMode.OpenOrCreate)
         getZipFileStream().CopyTo(file)
         tmpFile
 
-    let zip () = ZipFile.OpenRead(downloadedZipFile())
-    // let zip () = ZipFile.OpenRead(@"C:\Users\hiroshi.yamazaki\works\postal\ken_all.zip")
+    let zip (): ZipArchive = ZipFile.OpenRead(downloadedZipFile())
 
-    let csv () = zip().GetEntry("KEN_ALL.CSV")
-    let encSjis = Encoding.GetEncoding(932)
+    let csv (): ZipArchiveEntry = zip().GetEntry("KEN_ALL.CSV")
+    let encSjis: Encoding = Encoding.GetEncoding(932)
     
-    let parsePostal () =
+    let parsePostal (): Postal list =
         seq{ use reader = new StreamReader(csv().Open(), encSjis)
             while not reader.EndOfStream do
                 let str = reader.ReadLine()
@@ -54,7 +54,30 @@ module Program =
                 yield Postal(sa)
         } |> Seq.toList
 
-    let groupedPostal () = List.groupBy (fun (x : Postal) -> x.PostalCodeShort) (parsePostal())
+    let groupedPostal (): (String * Postal list) list = List.groupBy (fun (x : Postal) -> x.PostalCodeShort) (parsePostal())
+
+    let getBucketName: String = "postalcodes"
+
+    let getJsonName (code: String): String = code + ".json"
+
+    let putItem (item : String * Postal list): unit =
+        let code = fst item
+        let plist = snd item
+        let req = PutObjectRequest()
+        req.BucketName <- getBucketName
+        req.Key <- getJsonName(code)
+        req.ContentBody <- JsonConvert.SerializeObject(plist)
+        let res = s3client.PutObjectAsync(req)
+        ()
+
+    let putJson (context: ILambdaContext) =
+        groupedPostal() |> List.iter putItem
+
+    let getItem (code: String) =
+        let req = GetObjectRequest()
+        req.BucketName <- getBucketName
+        req.Key <- getJsonName(code)
+        s3client.GetObjectAsync(req)
 
     let handler (input: InputValue) (context: ILambdaContext) = 
         input.postal
